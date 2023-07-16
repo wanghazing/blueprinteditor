@@ -1,0 +1,15 @@
+
+@import "./assets/styles/reset.css";
+@import "./assets/styles/tailwind.css";
+
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+}
+.client-full {
+  width: 80%;
+  max-width: 1800px;
+}
