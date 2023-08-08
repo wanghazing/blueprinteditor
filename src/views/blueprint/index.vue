@@ -1,48 +1,49 @@
 <template>
   <div class="blueprint-page">
-    <div
-      id="blueprint-canvas"
-      @mousewheel="onMousewheel"
-      @contextmenu="onContextMenu"
-      @click="onCanvasClick"
-    >
-      <!-- <div class="scale-size-box">
+    <div id="blueprint-window">
+      <div class="scale-size-box">
         {{ (blueprintStore.scaleSize * 100) >> 0 }}%
-      </div> -->
-      <Node
-        v-for="node in blueprintStore.nodeList"
-        :key="node.id"
-        :schema="node"
-        @custom-drag="onNodeDrag"
-        @point-drag-start="onPointMouseDown"
+      </div>
+      <div
+        id="blueprint-canvas"
+        @mousewheel="onMousewheel"
+        @contextmenu="onContextMenu"
+        @click="onCanvasClick"
         :style="{
-          transform: `scale(${blueprintStore.scaleSize}) `,
-          transformOrigin: `${node.transformOrigin[0]}px ${node.transformOrigin[1]}px`,
-        }"
-      />
-      <svg
-        id="svg-container"
-        xmlns="http://www.w3.org/2000/svg"
-        :style="{
-          width: `${blueprintStore.el ? blueprintStore.el.offsetWidth : 0}px`,
-          height: `${blueprintStore.el ? blueprintStore.el.offsetHeight : 0}px`,
+          width: `${blueprintStore.el && blueprintStore.el.offsetWidth * 10}px`,
+          height: `${
+            blueprintStore.el && blueprintStore.el.offsetHeight * 10
+          }px`,
+          transform: `translate(${blueprintStore.translateX}px, ${blueprintStore.translateY}px) scale(${blueprintStore.scaleSize})`,
         }"
       >
-        <QdzLinearGradient v-for="link in linkList" :link="link" />
-        <path
-          v-for="link in linkList"
-          :key="link.id"
-          :d="link.path"
-          @click="onClickPath"
-          :stroke="`url(#linearGradient-${link.id})`"
-          stroke-width="2"
-          fill="transparent"
-          :style="{
-            transform: `scale(${blueprintStore.scaleSize}) `,
-            transformOrigin: 'center center',
-          }"
-        ></path>
-      </svg>
+        <Node
+          v-for="node in blueprintStore.nodeList"
+          :key="node.id"
+          :schema="node"
+          @custom-drag="onNodeDrag"
+          @point-drag-start="onPointMouseDown"
+        />
+        <svg id="svg-container" xmlns="http://www.w3.org/2000/svg">
+          <QdzLinearGradient v-for="link in linkList" :link="link" />
+          <path
+            v-for="link in linkList"
+            :key="link.id"
+            :d="link.path"
+            @click="onClickPath"
+            :stroke="`url(#linearGradient-${link.id})`"
+            stroke-width="2"
+            fill="transparent"
+            :style="{
+              transformOrigin: `${
+                blueprintStore.el ? blueprintStore.el.offsetWidth / 2 : 0
+              }px ${
+                blueprintStore.el ? blueprintStore.el.offsetHeight / 2 : 0
+              }px`,
+            }"
+          ></path>
+        </svg>
+      </div>
     </div>
     <ContextMenu ref="contextmenu" :model="contextMenuList"></ContextMenu>
   </div>
@@ -200,6 +201,7 @@ const dragStart = reactive({
   temPointType: "",
   addLinkFlag: false,
 });
+
 // const temPointId = ref("");
 const onClickPath = (e: MouseEvent) => {
   console.log(e);
@@ -476,31 +478,41 @@ const onPointMouseUp = (e: MouseEvent) => {
   document.removeEventListener("mouseup", onPointMouseUp);
 };
 
-const onMousewheel = () => {
-  // console.log(e.wheelDelta);
-  // if (e.wheelDelta > 0) {
-  //   blueprintStore.setScale(Math.min(blueprintStore.scaleSize + 0.15, 4));
-  // } else {
-  //   blueprintStore.setScale(Math.max(blueprintStore.scaleSize - 0.15, 0.1));
-  // }
+const onMousewheel = (e: MouseEvent) => {
+  console.log(e.wheelDelta);
+  if (e.wheelDelta > 0) {
+    blueprintStore.setScale(Math.min(blueprintStore.scaleSize + 0.15, 4));
+  } else {
+    blueprintStore.setScale(Math.max(blueprintStore.scaleSize - 0.15, 0.1));
+  }
 };
 const onCanvasClick = (e: MouseEvent) => {
-  // console.log();
+  console.log(e);
   if ((e.target as HTMLElement)?.tagName === "svg") {
     blueprintStore.setActiveNode("");
   }
 };
 
+const getNodeTransformOrigin = (node: QdzNode) => {
+  if (!blueprintStore.rect) {
+    return "0 0";
+  }
+  return `${blueprintStore.rect.width / 2 - node.x}px ${
+    blueprintStore.rect.height / 2 - node.y
+  }px`;
+};
+
 onMounted(() => {
   blueprintStore.initCanvas(
-    document.getElementById("blueprint-canvas") as HTMLDivElement
+    document.getElementById("blueprint-window") as HTMLDivElement
   );
   setTimeout(() => {
     // 等待vue-transition动画结束
     blueprintStore.setRect();
     blueprintStore.initNodeTransformOrigin();
+    blueprintStore.setTranslate();
+    drawLinks();
   }, 300);
-  drawLinks();
 });
 const drawCurve = (start: [number, number], end: [number, number]) => {
   const [x1, y1] = start;
@@ -547,6 +559,19 @@ const drawCurve = (start: [number, number], end: [number, number]) => {
   right: 0;
   bottom: 1rem;
   background-color: rgba(99, 99, 99, 0.73);
+  #blueprint-window {
+    height: 100%;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    .scale-size-box {
+      position: absolute;
+      top: 0;
+      width: 100%;
+      height: 50px;
+      z-index: 999;
+    }
+  }
   #blueprint-canvas {
     background-image: linear-gradient(
         90deg,
@@ -555,10 +580,7 @@ const drawCurve = (start: [number, number], end: [number, number]) => {
       ),
       linear-gradient(rgba(181 187 189 / 12%) 10%, rgba(131, 2, 2, 0) 10%);
     background-size: 20px 20px;
-    position: relative;
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
+    position: absolute;
     .blueprint-inner {
       position: absolute;
       left: 0;
@@ -571,6 +593,8 @@ const drawCurve = (start: [number, number], end: [number, number]) => {
       position: absolute;
       left: 0;
       top: 0;
+      width: 10000px;
+      height: 10000px;
       z-index: 50;
     }
   }

@@ -59,25 +59,20 @@ const onNodeMouseDown = (e: MouseEvent) => {
   // console.log(e);
   blueprintStore.setActiveNode(props.schema.id);
   const { clientX, clientY } = e;
-  dragStart.x = clientX - props.schema.x;
-  dragStart.y = clientY - props.schema.y;
+  dragStart.x = clientX * (1 / blueprintStore.scaleSize) - props.schema.x;
+  dragStart.y = clientY * (1 / blueprintStore.scaleSize) - props.schema.y;
   document.addEventListener("mousemove", dragListener);
   document.addEventListener("mouseup", onNodeMouseUp);
 };
 
 const dragListener = (e: MouseEvent) => {
   const { clientX, clientY } = e;
-  let [x, y] = [clientX - dragStart.x, clientY - dragStart.y];
-  const [xMin, xMax, yMin, yMax] = [
-    0 - props.schema.transformOrigin[0] * (1 - blueprintStore.scaleSize),
-    (blueprintStore.el as HTMLDivElement).offsetWidth -
-      props.schema.transformOrigin[0] * (1 - blueprintStore.scaleSize) -
-      blueprintStore.scaleSize * props.schema.w,
-    0 - props.schema.transformOrigin[1] * (1 - blueprintStore.scaleSize),
-    (blueprintStore.el as HTMLDivElement).offsetHeight -
-      props.schema.transformOrigin[1] * (1 - blueprintStore.scaleSize) -
-      blueprintStore.scaleSize * props.schema.h,
+  let [x, y] = [
+    clientX * (1 / blueprintStore.scaleSize) - dragStart.x,
+    clientY * (1 / blueprintStore.scaleSize) - dragStart.y,
   ];
+  const [xMin, xMax, yMin, yMax] = [0, 10000, 0, 10000];
+  console.log(x, y, blueprintStore.scaleSize);
   if (x < xMin) {
     x = xMin;
   }
@@ -93,8 +88,8 @@ const dragListener = (e: MouseEvent) => {
   // rect.x = x;
   // rect.y = y;
   blueprintStore.setNodeRect(props.schema.id, {
-    x,
-    y,
+    x: x,
+    y: y,
   });
   emit("custom-drag", points);
   // console.log(activeNode.left, activeNode.top);

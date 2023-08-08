@@ -154,6 +154,19 @@ export const useBlueprintStore = defineStore("blueprint", {
         this.rect = this.el.getBoundingClientRect();
       }
     },
+    setTranslate() {
+      this.translateX =
+        (this.rect?.width || 0) / 2 - (this.el?.offsetWidth || 0) * 5;
+      this.translateY =
+        (this.rect?.height || 0) / 2 - (this.el?.offsetHeight || 0) * 5;
+      this.nodeList = this.nodeList.map((node) => {
+        return {
+          ...node,
+          x: node.x - this.translateX,
+          y: node.y - this.translateY,
+        };
+      });
+    },
     setScale(scaleSize = 1) {
       if (scaleSize % 1 === 0) {
         this.scaleSize = scaleSize;
