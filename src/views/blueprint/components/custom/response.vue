@@ -121,6 +121,12 @@ const onInputTitle = (e: FocusEvent) => {
 
 const onAddRule = () => {
   addRuleFlag.value = true;
+  nextTick(() => {
+    let input = document.querySelector(".row-item__add input");
+    if (input) {
+      (input as HTMLInputElement).focus();
+    }
+  });
 };
 const onAddRuleFinish = (e: FocusEvent) => {
   const value = (e.target as HTMLInputElement).value;

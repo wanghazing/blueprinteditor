@@ -1,8 +1,50 @@
 <template>
   <div class="blueprint-page">
     <div id="blueprint-window">
-      <div class="scale-size-box">
-        {{ (blueprintStore.scaleSize * 100) >> 0 }}%
+      <div class="blueprint-toolbox tw-rounded-md tw-shadow-md tw-px-6">
+        <i
+          class="pi pi-search-minus tw-text-center"
+          style="font-size: 1.25rem"
+          @click="() => setScale('minus')"
+        ></i>
+        <span class="tw-ml-6 tw-text-center" style="font-size: 1.25rem"
+          >{{ (blueprintStore.scaleSize * 100) >> 0 }}%</span
+        >
+        <i
+          class="pi pi-search-plus tw-ml-6 tw-text-center"
+          style="font-size: 1.25rem"
+          @click="() => setScale('plus')"
+        ></i>
+        <!-- <i
+          v-if="isFullscreen"
+          class="pi pi-window-minimize tw-ml-6 tw-text-center"
+          style="font-size: 1.25rem"
+          @click="setFullscreen(false)"
+        ></i>
+        <i
+          v-else
+          class="pi pi-window-maximize tw-ml-6 tw-text-center"
+          style="font-size: 1.25rem"
+          @click="setFullscreen(true)"
+        ></i> -->
+        <i
+          class="pi pi-arrows-alt tw-ml-6 tw-text-center"
+          :class="{ 'ico-btn--active': isMoveMode }"
+          style="font-size: 1.25rem"
+          @click="() => (isMoveMode = !isMoveMode)"
+        ></i>
+        <i
+          class="pi pi-replay tw-ml-6 tw-text-center"
+          style="font-size: 1.25rem"
+        ></i>
+        <i
+          class="pi pi-code tw-ml-6 tw-text-center"
+          style="font-size: 1.25rem"
+        ></i>
+        <i
+          class="pi pi-question-circle tw-ml-6 tw-text-center"
+          style="font-size: 1.25rem"
+        ></i>
       </div>
       <div
         id="blueprint-canvas"
@@ -15,8 +57,15 @@
             blueprintStore.el && blueprintStore.el.offsetHeight * 10
           }px`,
           transform: `translate(${blueprintStore.translateX}px, ${blueprintStore.translateY}px) scale(${blueprintStore.scaleSize})`,
+          transformOrigin: `center center`,
         }"
       >
+        <div
+          v-if="isMoveMode"
+          class="move-modal"
+          @mousedown="onModalMouseDown"
+          @mouseup="onModalMouseUp"
+        ></div>
         <Node
           v-for="node in blueprintStore.nodeList"
           :key="node.id"
@@ -24,7 +73,18 @@
           @custom-drag="onNodeDrag"
           @point-drag-start="onPointMouseDown"
         />
-        <svg id="svg-container" xmlns="http://www.w3.org/2000/svg">
+        <svg
+          id="svg-container"
+          xmlns="http://www.w3.org/2000/svg"
+          :style="{
+            width: `${
+              blueprintStore.el && blueprintStore.el.offsetWidth * 10
+            }px`,
+            height: `${
+              blueprintStore.el && blueprintStore.el.offsetHeight * 10
+            }px`,
+          }"
+        >
           <QdzLinearGradient v-for="link in linkList" :link="link" />
           <path
             v-for="link in linkList"
@@ -34,13 +94,6 @@
             :stroke="`url(#linearGradient-${link.id})`"
             stroke-width="2"
             fill="transparent"
-            :style="{
-              transformOrigin: `${
-                blueprintStore.el ? blueprintStore.el.offsetWidth / 2 : 0
-              }px ${
-                blueprintStore.el ? blueprintStore.el.offsetHeight / 2 : 0
-              }px`,
-            }"
           ></path>
         </svg>
       </div>
@@ -50,6 +103,7 @@
 </template>
 <script lang="ts" setup>
 import { ref, reactive, onMounted, nextTick } from "vue";
+// import screenfull from "screenfull";
 import ContextMenu from "primevue/contextmenu";
 import { getRandomId } from "/@/utils";
 import Node from "./components/node.vue";
@@ -362,20 +416,27 @@ const onPointMouseDown = (detail: {
 const dragListener = (e: MouseEvent) => {
   const { clientX, clientY } = e;
   let [x, y] = [
-    clientX - (blueprintStore.rect?.left || 0),
-    clientY - (blueprintStore.rect?.top || 0),
+    clientX - blueprintStore.translateX - (blueprintStore.rect?.left || 0),
+    clientY - blueprintStore.translateY - (blueprintStore.rect?.top || 0),
   ];
+  let center = [
+    (blueprintStore.el?.offsetWidth || 0) * 5,
+    (blueprintStore.el?.offsetHeight || 0) * 5,
+  ];
+  x = center[0] + (x - center[0]) / blueprintStore.scaleSize;
+  y = center[1] + (y - center[1]) / blueprintStore.scaleSize;
+  console.log(x, y);
   if (x < 0) {
     x = 0;
   }
   if (y < 0) {
     y = 0;
   }
-  if (x > (blueprintStore.el as HTMLDivElement).offsetWidth) {
-    x = (blueprintStore.el as HTMLDivElement).offsetWidth;
+  if (x > (blueprintStore.el as HTMLDivElement).offsetWidth * 10) {
+    x = (blueprintStore.el as HTMLDivElement).offsetWidth * 10;
   }
-  if (y > (blueprintStore.el as HTMLDivElement).offsetHeight) {
-    y = (blueprintStore.el as HTMLDivElement).offsetHeight;
+  if (y > (blueprintStore.el as HTMLDivElement).offsetHeight * 10) {
+    y = (blueprintStore.el as HTMLDivElement).offsetHeight * 10;
   }
   // linkList.value[dragStart.linkIndex].
   const activeLink = linkList.value[dragStart.linkIndex];
@@ -396,28 +457,21 @@ const onPointMouseUp = (e: MouseEvent) => {
   let isBind = false,
     offsetX = e.clientX,
     offsetY = e.clientY;
-  points.forEach((point, i) => {
+  points.forEach((point) => {
     if (isBind) {
       return;
     }
     // console.log(point.getBoundingClientRect());
     const { x, y } = point.getBoundingClientRect();
-    if (i === 4) {
-      console.log(x, y);
-      console.log(offsetX, offsetY);
-    }
+
     if (
-      // x < offsetX + 10 &&
-      // x > offsetX - 3 &&
-      // y < offsetY + 10 &&
-      // y > offsetY - 3
       offsetX < x + 16 &&
       offsetX > x - 9 &&
       offsetY < y + 16 &&
       offsetY > y - 9
     ) {
       const pointId = point.getAttribute("data-pointid");
-      console.log(pointId, dragStart.temPointId);
+      // console.log(pointId, dragStart.temPointId);
       if (pointId === dragStart.temPointId) {
         // 连接原来的端口
         linkList.value[dragStart.linkIndex].startTmp = null;
@@ -429,16 +483,16 @@ const onPointMouseUp = (e: MouseEvent) => {
         const idx = linkList.value.findIndex(
           (link) => link.start === pointId || link.end === pointId
         );
-        console.log(idx);
+        // console.log(idx);
         if (idx === -1) {
           // 未使用的端口
           const pointType = point.getAttribute("data-pointType");
-          console.log(dragStart.temPointType, pointType);
+          // console.log(dragStart.temPointType, pointType);
           if (dragStart.temPointType === pointType || dragStart.addLinkFlag) {
             // 只能连接与原类型相同的端口
             // linkList.value[idx]
             const nodeId = point.getAttribute("data-nodeid");
-            console.log(linkList.value[dragStart.linkIndex]);
+            // console.log(linkList.value[dragStart.linkIndex]);
             if (linkList.value[dragStart.linkIndex].startTmp) {
               linkList.value[dragStart.linkIndex].startTmp = null;
               linkList.value[dragStart.linkIndex].start = pointId as string;
@@ -465,7 +519,7 @@ const onPointMouseUp = (e: MouseEvent) => {
       }
     }
   });
-  console.log(isBind);
+  // console.log(isBind);
   if (!isBind) {
     // 没有可连接的端口,删除连线
     linkList.value.splice(dragStart.linkIndex, 1);
@@ -473,36 +527,30 @@ const onPointMouseUp = (e: MouseEvent) => {
     dragStart.x = dragStart.y = dragStart.linkIndex = 0;
     dragStart.temPointId = dragStart.temPointType = "";
   }
-  console.log(linkList.value);
+  // console.log(linkList.value);
   document.removeEventListener("mousemove", dragListener);
   document.removeEventListener("mouseup", onPointMouseUp);
 };
 
-const onMousewheel = (e: MouseEvent) => {
-  console.log(e.wheelDelta);
-  if (e.wheelDelta > 0) {
-    blueprintStore.setScale(Math.min(blueprintStore.scaleSize + 0.15, 4));
-  } else {
-    blueprintStore.setScale(Math.max(blueprintStore.scaleSize - 0.15, 0.1));
-  }
-};
 const onCanvasClick = (e: MouseEvent) => {
-  console.log(e);
   if ((e.target as HTMLElement)?.tagName === "svg") {
     blueprintStore.setActiveNode("");
   }
 };
 
-const getNodeTransformOrigin = (node: QdzNode) => {
-  if (!blueprintStore.rect) {
-    return "0 0";
-  }
-  return `${blueprintStore.rect.width / 2 - node.x}px ${
-    blueprintStore.rect.height / 2 - node.y
-  }px`;
-};
+// const getNodeTransformOrigin = (node: QdzNode) => {
+//   if (!blueprintStore.rect) {
+//     return "0 0";
+//   }
+//   return `${blueprintStore.rect.width / 2 - node.x}px ${
+//     blueprintStore.rect.height / 2 - node.y
+//   }px`;
+// };
 
 onMounted(() => {
+  initBlueprint();
+});
+const initBlueprint = () => {
   blueprintStore.initCanvas(
     document.getElementById("blueprint-window") as HTMLDivElement
   );
@@ -510,11 +558,17 @@ onMounted(() => {
     // 等待vue-transition动画结束
     blueprintStore.setRect();
     blueprintStore.initNodeTransformOrigin();
-    blueprintStore.setTranslate();
+    blueprintStore.initTranslate([
+      (blueprintStore.rect?.width || 0) / 2 -
+        (blueprintStore.el?.offsetWidth || 0) * 5,
+      (blueprintStore.rect?.height || 0) / 2 -
+        (blueprintStore.el?.offsetHeight || 0) * 5,
+    ]);
     drawLinks();
   }, 300);
-});
+};
 const drawCurve = (start: [number, number], end: [number, number]) => {
+  // console.log(start, end);
   const [x1, y1] = start;
   // 取中点作为结束点，另一半曲线通过svg自动镜像
   const [x2, y2] = [(end[0] + start[0]) / 2, (end[1] + start[1]) / 2];
@@ -549,6 +603,111 @@ const drawCurve = (start: [number, number], end: [number, number]) => {
     return `M ${x1} ${y1} Q ${xt} ${yt}, ${x2} ${y2} T ${end[0]} ${end[1]}`;
   }
 };
+
+// const isFullscreen = ref(false);
+// const setFullscreen = (flag: boolean) => {
+//   isFullscreen.value = flag;
+//   if (flag) {
+//     screenfull.exit();
+//   }
+//   screenfull.request();
+// };
+// 平移相关
+const isMoveMode = ref(false);
+const moveStart = reactive({
+  x: 0,
+  y: 0,
+});
+const onModalMouseUp = () => {
+  document.removeEventListener("mousemove", moveListener);
+  document.removeEventListener("mouseup", onModalMouseUp);
+};
+const onModalMouseDown = (e: MouseEvent) => {
+  const { clientX, clientY } = e;
+  const { translateX, translateY } = blueprintStore;
+  moveStart.x = clientX - translateX;
+  moveStart.y = clientY - translateY;
+  document.addEventListener("mousemove", moveListener);
+  document.addEventListener("mouseup", onModalMouseUp);
+};
+const moveListener = (e: MouseEvent) => {
+  const { clientX, clientY } = e;
+  let [x, y] = [clientX - moveStart.x, clientY - moveStart.y];
+  let [xMin, xMax, yMin, yMax] = [
+    (blueprintStore.initTranslateX * (1 - blueprintStore.scaleSize)) / 0.9,
+    -1 *
+      (4 + 5 * blueprintStore.scaleSize) *
+      (blueprintStore.el?.offsetWidth || 0),
+    (blueprintStore.initTranslateY * (1 - blueprintStore.scaleSize)) / 0.9,
+    -1 *
+      (4 + 5 * blueprintStore.scaleSize) *
+      (blueprintStore.el?.offsetHeight || 0),
+  ];
+  if (x > xMin) {
+    x = xMin;
+  }
+  if (y > yMin) {
+    y = yMin;
+  }
+  if (x < xMax) {
+    x = xMax;
+  }
+  if (y < yMax) {
+    y = yMax;
+  }
+  blueprintStore.setTranslate([x, y]);
+};
+
+// 缩放相关
+const onMousewheel = (e: any) => {
+  console.log(isMoveMode.value);
+  if (e.wheelDelta > 0) {
+    // blueprintStore.setScale(Math.min(blueprintStore.scaleSize + 0.15, 4));
+    setScale("plus");
+  } else {
+    // blueprintStore.setScale(Math.max(blueprintStore.scaleSize - 0.15, 0.1));
+    setScale("minus");
+  }
+};
+const setScale = (flag: "plus" | "minus") => {
+  if (flag === "plus") {
+    blueprintStore.setScale(Math.min(blueprintStore.scaleSize + 0.15, 4));
+  } else {
+    blueprintStore.setScale(Math.max(blueprintStore.scaleSize - 0.15, 0.1));
+  }
+  let { translateX, translateY } = blueprintStore;
+  console.log(blueprintStore.scaleSize);
+  let [xMin, xMax, yMin, yMax] = [
+    (blueprintStore.initTranslateX * (1 - blueprintStore.scaleSize)) / 0.9,
+    -1 *
+      (4 + 5 * blueprintStore.scaleSize) *
+      (blueprintStore.el?.offsetWidth || 0),
+    (blueprintStore.initTranslateY * (1 - blueprintStore.scaleSize)) / 0.9,
+    -1 *
+      (4 + 5 * blueprintStore.scaleSize) *
+      (blueprintStore.el?.offsetHeight || 0),
+  ];
+  console.log(translateX, translateY);
+  console.log(xMin, xMax, yMin, yMax);
+  if (translateX > xMin) {
+    console.log("1");
+    translateX = xMin;
+  }
+  if (translateY > yMin) {
+    console.log("2");
+    translateY = yMin;
+  }
+  if (translateX < xMax) {
+    console.log("3");
+    translateX = xMax;
+  }
+  if (translateY < yMax) {
+    console.log("4");
+    translateY = yMax;
+  }
+  console.log(translateX, translateY);
+  blueprintStore.setTranslate([translateX, translateY]);
+};
 </script>
 
 <style lang="scss">
@@ -564,12 +723,29 @@ const drawCurve = (start: [number, number], end: [number, number]) => {
     width: 100%;
     position: relative;
     overflow: hidden;
-    .scale-size-box {
+    .blueprint-toolbox {
       position: absolute;
-      top: 0;
-      width: 100%;
-      height: 50px;
+      top: 30px;
+      left: 30px;
+      height: 60px;
       z-index: 999;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      background-color: #fff;
+      width: 22rem;
+      i {
+        cursor: pointer;
+        &:hover {
+          color: rgb(129, 37, 242);
+        }
+      }
+      .ico-btn--active {
+        color: rgb(129, 37, 242);
+      }
+      span {
+        min-width: 2.5rem;
+      }
     }
   }
   #blueprint-canvas {
@@ -581,6 +757,16 @@ const drawCurve = (start: [number, number], end: [number, number]) => {
       linear-gradient(rgba(181 187 189 / 12%) 10%, rgba(131, 2, 2, 0) 10%);
     background-size: 20px 20px;
     position: absolute;
+    .move-modal {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      top: 0;
+      background-color: rgb(134 185 210 / 40%);
+      z-index: 999;
+      cursor: grab;
+    }
     .blueprint-inner {
       position: absolute;
       left: 0;
@@ -593,8 +779,6 @@ const drawCurve = (start: [number, number], end: [number, number]) => {
       position: absolute;
       left: 0;
       top: 0;
-      width: 10000px;
-      height: 10000px;
       z-index: 50;
     }
   }

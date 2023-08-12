@@ -71,8 +71,12 @@ const dragListener = (e: MouseEvent) => {
     clientX * (1 / blueprintStore.scaleSize) - dragStart.x,
     clientY * (1 / blueprintStore.scaleSize) - dragStart.y,
   ];
-  const [xMin, xMax, yMin, yMax] = [0, 10000, 0, 10000];
-  console.log(x, y, blueprintStore.scaleSize);
+  const [xMin, xMax, yMin, yMax] = [
+    0,
+    (blueprintStore.el?.offsetWidth || 0) * 10 - props.schema.w,
+    0,
+    (blueprintStore.el?.offsetHeight || 0) * 10 - props.schema.h,
+  ];
   if (x < xMin) {
     x = xMin;
   }

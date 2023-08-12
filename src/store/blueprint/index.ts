@@ -54,6 +54,8 @@ export const useBlueprintStore = defineStore("blueprint", {
       scaleSize: 1,
       translateX: 0,
       translateY: 0,
+      initTranslateX: 0,
+      initTranslateY: 0,
       sizes: {
         client: [100, 80],
         empty: [100, 100],
@@ -154,11 +156,10 @@ export const useBlueprintStore = defineStore("blueprint", {
         this.rect = this.el.getBoundingClientRect();
       }
     },
-    setTranslate() {
-      this.translateX =
-        (this.rect?.width || 0) / 2 - (this.el?.offsetWidth || 0) * 5;
-      this.translateY =
-        (this.rect?.height || 0) / 2 - (this.el?.offsetHeight || 0) * 5;
+    initTranslate(point: [number, number]) {
+      this.setTranslate(point);
+      this.initTranslateX = point[0];
+      this.initTranslateY = point[1];
       this.nodeList = this.nodeList.map((node) => {
         return {
           ...node,
@@ -166,6 +167,11 @@ export const useBlueprintStore = defineStore("blueprint", {
           y: node.y - this.translateY,
         };
       });
+    },
+    setTranslate(point: [number, number]) {
+      this.translateX = point[0];
+      this.translateY = point[1];
+      // (this.rect?.height || 0) / 2 - (this.el?.offsetHeight || 0) * 5;
     },
     setScale(scaleSize = 1) {
       if (scaleSize % 1 === 0) {
