@@ -120,6 +120,9 @@ const onEditTitle = (e: MouseEvent) => {
     const input = document.getElementById(`node-title-input-${props.nodeId}`);
     if (input) {
       console.log(input);
+      if (props.title) {
+        (input as HTMLInputElement).value = props.title;
+      }
       input.focus();
     }
   });

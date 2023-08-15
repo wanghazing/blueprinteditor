@@ -73,9 +73,9 @@ const dragListener = (e: MouseEvent) => {
   ];
   const [xMin, xMax, yMin, yMax] = [
     0,
-    (blueprintStore.el?.offsetWidth || 0) * 10 - props.schema.w,
+    blueprintStore.maxWidth - props.schema.w,
     0,
-    (blueprintStore.el?.offsetHeight || 0) * 10 - props.schema.h,
+    blueprintStore.maxHeight - props.schema.h,
   ];
   if (x < xMin) {
     x = xMin;
@@ -197,6 +197,9 @@ const getComponent = (nodeType: QdzNodeType) => {
           height: 6px;
           border-radius: 50%;
           background-color: rgb(0, 207, 110);
+          &:hover {
+            transform: scale(1.5);
+          }
         }
         .port-point-o {
           position: absolute;
@@ -204,6 +207,9 @@ const getComponent = (nodeType: QdzNodeType) => {
           height: 6px;
           border-radius: 50%;
           background-color: rgb(187, 207, 0);
+          &:hover {
+            transform: scale(1.5);
+          }
         }
         &__add {
           text-align: center;

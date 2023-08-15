@@ -46,7 +46,7 @@
             (e) =>
               $emit('onPointMouseDown', {
                 event: e,
-                type: 'input',
+                type: 'output',
                 id: row.outputId,
               })
           "

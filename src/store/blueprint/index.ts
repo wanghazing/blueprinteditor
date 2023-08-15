@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-
+import { debounce, cloneDeep } from "lodash-es";
 import { getRandomId } from "/@/utils";
 
 export type QdzNodeType =
@@ -25,6 +25,8 @@ export type QdzNode = {
   y: number;
   w: number;
   h: number;
+  initX: number;
+  initY: number;
   direction: "ltr" | "rtl" | "rtr" | "ltl";
   host?: string;
   editFlag: boolean;
@@ -48,8 +50,19 @@ export type QdzLink = {
 export const useBlueprintStore = defineStore("blueprint", {
   state: () => {
     return {
+      /**
+       * 窗口div
+       */
       el: null as HTMLDivElement | null,
       rect: null as DOMRect | null,
+      /**
+       * 画布最大宽度
+       */
+      maxWidth: window.innerWidth * 20,
+      /**
+       * 画布最大高度
+       */
+      maxHeight: window.innerHeight * 20,
       activeNodeId: "",
       scaleSize: 1,
       translateX: 0,
@@ -80,8 +93,10 @@ export const useBlueprintStore = defineStore("blueprint", {
           id: "f23r23trtt",
           title: "客户端",
           // position: [100, 200],
-          x: 100,
-          y: 200,
+          initX: 100,
+          initY: 200,
+          x: 0,
+          y: 0,
           w: 100,
           h: 80,
           editFlag: false,
@@ -96,8 +111,10 @@ export const useBlueprintStore = defineStore("blueprint", {
           type: "server",
           id: "1g781d9f88d",
           title: "服务端",
-          x: 826,
-          y: 279,
+          initX: 826,
+          initY: 279,
+          x: 0,
+          y: 0,
           w: 100,
           h: 80,
           editFlag: false,
@@ -113,8 +130,10 @@ export const useBlueprintStore = defineStore("blueprint", {
           type: "request",
           id: "ge988d8fg1g",
           title: "请求拦截",
-          x: 444,
-          y: 85,
+          initX: 444,
+          initY: 85,
+          x: 0,
+          y: 0,
           w: 100,
           h: 110,
           editFlag: false,
@@ -129,8 +148,10 @@ export const useBlueprintStore = defineStore("blueprint", {
           type: "response",
           id: "q8g1688d8d",
           title: "响应拦截",
-          x: 365,
-          y: 488,
+          initX: 365,
+          initY: 488,
+          x: 0,
+          y: 0,
           w: 100,
           h: 110,
           editFlag: false,
@@ -142,6 +163,70 @@ export const useBlueprintStore = defineStore("blueprint", {
           ],
         },
       ] as QdzNode[],
+      linkList: [
+        {
+          // 客户端-请求拦截
+          id: "gw3wt3t56",
+          startNodeId: "f23r23trtt",
+          endNodeId: "ge988d8fg1g",
+          startNode: null,
+          endNode: null,
+          startTmp: null,
+          endTmp: null,
+          start: "j89gs8hjer",
+          end: "xc89s811",
+          direction: "rtl", // 方向， ltr: 左出右进 rtl: 右出左进 rtr:右出右进  ltl:左出左进
+          path: "",
+          points: [0, 0, 0, 0],
+        },
+        {
+          // 请求拦截-服务端
+          id: "1x8fhg1d5d",
+          startNodeId: "ge988d8fg1g",
+          endNodeId: "1g781d9f88d",
+          startNode: null,
+          endNode: null,
+          startTmp: null,
+          endTmp: null,
+          start: "gedx1d6f",
+          end: "g718df1787",
+          direction: "rtl", // 方向， ltr: 左出右进 rtl: 右出左进 rtr:右出右进  ltl:左出左进
+          path: "",
+          points: [0, 0, 0, 0],
+        },
+        {
+          // 服务端-响应拦截
+          id: "1g89s8e8d",
+          startNodeId: "1g781d9f88d",
+          endNodeId: "q8g1688d8d",
+          startNode: null,
+          endNode: null,
+          startTmp: null,
+          endTmp: null,
+          start: "gjwe77989",
+          end: "b1d8d5f1",
+          direction: "rtl", // 方向， ltr: 左出右进 rtl: 右出左进 rtr:右出右进  ltl:左出左进
+          path: "",
+          points: [0, 0, 0, 0],
+        },
+        {
+          // 响应拦截-客户端
+          id: "g4d98df5r",
+          startNodeId: "q8g1688d8d",
+          endNodeId: "f23r23trtt",
+          startNode: null,
+          endNode: null,
+          startTmp: null,
+          endTmp: null,
+          start: "ntf84f4g1g",
+          end: "g18erg891d",
+          direction: "rtl", // 方向， ltr: 左出右进 rtl: 右出左进 rtr:右出右进  ltl:左出左进
+          path: "",
+          points: [0, 0, 0, 0],
+        },
+      ] as QdzLink[],
+      history: [] as { nodeList: QdzNode[]; linkList: QdzLink[] }[],
+      maxHistoryLength: 10,
     };
   },
   actions: {
@@ -163,10 +248,15 @@ export const useBlueprintStore = defineStore("blueprint", {
       this.nodeList = this.nodeList.map((node) => {
         return {
           ...node,
-          x: node.x - this.translateX,
-          y: node.y - this.translateY,
+          x: node.initX - this.translateX,
+          y: node.initY - this.translateY,
         };
       });
+      this.linkList.forEach((link) => {
+        link.startNode = null;
+        link.endNode = null;
+      });
+      this.saveHistory();
     },
     setTranslate(point: [number, number]) {
       this.translateX = point[0];
@@ -196,6 +286,7 @@ export const useBlueprintStore = defineStore("blueprint", {
             ] as number);
         }
       }
+      this.saveHistory();
     },
     setNodeEditFlag(id: string, editFlag: boolean) {
       const node = this.nodeList.find((n) => n.id === id);
@@ -208,6 +299,7 @@ export const useBlueprintStore = defineStore("blueprint", {
       if (node) {
         node.editFlag = false;
         node.title = title;
+        this.saveHistory();
       }
     },
     addNodeRule(id: string, ruleName: string) {
@@ -220,6 +312,7 @@ export const useBlueprintStore = defineStore("blueprint", {
             editable: true,
             outputId: getRandomId(),
           });
+          this.saveHistory();
         }
       }
     },
@@ -229,6 +322,7 @@ export const useBlueprintStore = defineStore("blueprint", {
         const idx = node.rows.findIndex(({ rule }) => rule === ruleName);
         if (idx !== -1) {
           node.rows.splice(idx, 1);
+          this.saveHistory();
         }
       }
     },
@@ -236,6 +330,7 @@ export const useBlueprintStore = defineStore("blueprint", {
       const node = this.nodeList.find((n) => n.id === id);
       if (node) {
         node.host = host;
+        this.saveHistory();
       }
     },
     appendNode(
@@ -248,17 +343,19 @@ export const useBlueprintStore = defineStore("blueprint", {
     ) {
       const id = getRandomId();
       const { offsetWidth, offsetHeight } = this.el as HTMLDivElement;
-      let [x, y] = node.position;
+      let [initX, initY] = node.position;
       const [w, h] = this.sizes[node.type];
-      x = Math.min(x, offsetWidth - w - 20);
-      y = Math.min(y, offsetHeight - h - 20);
+      initX = Math.min(initX, offsetWidth - w - 20);
+      initY = Math.min(initY, offsetHeight - h - 20);
       this.nodeList.push({
         type: node.type,
         id,
         title: node.title,
+        initX,
+        initY,
         // position: [100, 200],
-        x,
-        y,
+        x: initX - this.translateX,
+        y: initY - this.translateY,
         w,
         h,
         transformOrigin: [0, 0],
@@ -280,6 +377,34 @@ export const useBlueprintStore = defineStore("blueprint", {
             this.el.offsetHeight / 2 - node.y,
           ]);
       });
+    },
+    _saveHistory: debounce(function (that) {
+      that.history.push({
+        nodeList: cloneDeep(that.nodeList),
+        linkList: cloneDeep(that.linkList),
+      });
+      if (that.history.length > that.maxHistoryLength) {
+        that.history.shift();
+      }
+    }, 200),
+    saveHistory() {
+      this._saveHistory(this);
+    },
+    undo(callback: Function) {
+      if (this.history.length < 2) {
+        return void 0;
+      }
+      this.history.splice(this.history.length - 1);
+      const his = this.history[this.history.length - 1];
+      if (his) {
+        this.nodeList = cloneDeep(his.nodeList);
+        this.linkList = his.linkList.map((link: QdzLink) => ({
+          ...link,
+          startNode: null,
+          endNode: null,
+        }));
+      }
+      callback();
     },
   },
 });
