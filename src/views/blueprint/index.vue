@@ -45,6 +45,12 @@
           @click="blueprintStore.undo(() => {})"
         ></i>
         <i
+          class="pi pi-trash tw-ml-6 tw-text-center tw-text-red-600"
+          :class="{ 'ico-btn--disabled': !blueprintStore.activeNodeId }"
+          style="font-size: 1.25rem"
+          @click="blueprintStore.removeActiveNode"
+        ></i>
+        <i
           class="pi pi-code tw-ml-6 tw-text-center"
           style="font-size: 1.25rem"
           @click="showStoreCode"
@@ -59,6 +65,8 @@
         @mousewheel="onMousewheel"
         @contextmenu="onContextMenu"
         @click="onCanvasClick"
+        @drop="onDrop"
+        @dragover.prevent
         :style="{
           width: `${blueprintStore.maxWidth}px`,
           height: `${blueprintStore.maxHeight}px`,
@@ -169,6 +177,13 @@ const contextMenuList = ref([
       onConfirmAppendNode("server");
     },
   },
+  {
+    label: "标注",
+    icon: "pi pi-fw pi-plus",
+    command: () => {
+      onConfirmAppendNode("remark");
+    },
+  },
   { label: "报文", icon: "pi pi-fw pi-plus" },
   { label: "资源", icon: "pi pi-fw pi-plus" },
 ]);
@@ -181,6 +196,7 @@ const onConfirmAppendNode = (type: QdzNodeType) => {
     json: "json数据",
     source: "文件",
     empty: "空节点",
+    remark: "标注",
   }[type];
   let count = 1;
   while (
@@ -505,6 +521,7 @@ const onNodeDrag = (idList: string[]) => {
  * canvas相关 开始
  */
 const onCanvasClick = (e: MouseEvent) => {
+  console.log(e);
   if ((e.target as HTMLElement)?.tagName === "svg") {
     blueprintStore.setActiveNode("");
   }
@@ -652,7 +669,7 @@ const storeCode = ref({});
 const showStoreCode = () => {
   storeCode.value = {
     nodeList: blueprintStore.nodeList.map((node) => {
-      const { x, y, w, h, direction, type, title, id, rows } = node;
+      const { x, y, w, h, direction, type, title, id, rows, remark } = node;
       return {
         x: x + blueprintStore.translateX,
         y: y + blueprintStore.translateY,
@@ -662,7 +679,8 @@ const showStoreCode = () => {
         type,
         title,
         id,
-        rows,
+        remark: type === "remark" ? remark : undefined,
+        rows: type === "remark" ? undefined : rows,
       };
     }),
     linkList: blueprintStore.linkList.map((link) => {
@@ -672,6 +690,12 @@ const showStoreCode = () => {
   };
   isShowCode.value = true;
 };
+
+const onDrop = (e: DragEvent) => {
+  console.log(e.dataTransfer?.files);
+  e.preventDefault();
+};
+
 onMounted(() => {
   // 等待vue-transition结束
   setTimeout(() => {
@@ -738,7 +762,7 @@ const drawCurve = (start: [number, number], end: [number, number]) => {
       flex-direction: row;
       align-items: center;
       background-color: #fff;
-      width: 27.5rem;
+      width: 31rem;
       i {
         cursor: pointer;
         &:hover {

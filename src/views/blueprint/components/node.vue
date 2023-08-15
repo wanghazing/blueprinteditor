@@ -13,6 +13,7 @@
       width: props.schema.w + 'px',
       minHeight: props.schema.h + 'px',
     }"
+    @mousewheel.stop
   >
     <component
       :is="getComponent(props.schema.type)"
@@ -24,6 +25,7 @@
       :host="props.schema.host"
       :node-id="props.schema.id"
       :is-active="props.schema.id === blueprintStore.activeNodeId"
+      :remark="props.schema.remark || ''"
     />
   </div>
 </template>
@@ -35,16 +37,16 @@ import NodeClient from "./custom/client.vue";
 import NodeServer from "./custom/server.vue";
 import NodeRequest from "./custom/request.vue";
 import NodeResponse from "./custom/response.vue";
+import NodeRemark from "./custom/remark.vue";
 import { useBlueprintStore, QdzNode, QdzNodeType } from "/@/store/blueprint";
 
 const blueprintStore = useBlueprintStore();
 const props = defineProps<{ schema: QdzNode }>();
 const emit = defineEmits(["point-drag-start", "custom-drag"]);
 
-const points: string[] = props.schema.rows.reduce(
-  (pv: string[], cv) => pv.concat(cv.inputId || [], cv.outputId || []),
-  []
-);
+// const points = computed<string[]>(() => {
+//   return ;
+// });
 const dragStart = reactive({
   x: 0,
   y: 0,
@@ -95,7 +97,13 @@ const dragListener = (e: MouseEvent) => {
     x: x,
     y: y,
   });
-  emit("custom-drag", points);
+  emit(
+    "custom-drag",
+    props.schema.rows.reduce(
+      (pv: string[], cv) => pv.concat(cv.inputId || [], cv.outputId || []),
+      []
+    )
+  );
   // console.log(activeNode.left, activeNode.top);
   // linePath.value = drawCurve([x + activeNode.width, y + 42], [600, 240]);
 };
@@ -118,6 +126,9 @@ const getComponent = (nodeType: QdzNodeType) => {
   }
   if (nodeType === "response") {
     return NodeResponse;
+  }
+  if (nodeType === "remark") {
+    return NodeRemark;
   }
   return NodeEmpty;
 };

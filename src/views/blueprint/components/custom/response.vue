@@ -107,7 +107,9 @@ const onEditTitle = (e: MouseEvent) => {
   nextTick(() => {
     const input = document.getElementById(`node-title-input-${props.nodeId}`);
     if (input) {
-      console.log(input);
+      if (props.title) {
+        (input as HTMLInputElement).value = props.title;
+      }
       input.focus();
     }
   });
@@ -124,9 +126,6 @@ const onAddRule = () => {
   nextTick(() => {
     let input = document.querySelector(".row-item__add input");
     if (input) {
-      if (props.title) {
-        (input as HTMLInputElement).value = props.title;
-      }
       (input as HTMLInputElement).focus();
     }
   });

@@ -9,6 +9,7 @@ export type QdzNodeType =
   | "response"
   | "json"
   | "source"
+  | "remark"
   | "empty";
 export type QdzNodeRow = {
   rule: string;
@@ -29,6 +30,7 @@ export type QdzNode = {
   initY: number;
   direction: "ltr" | "rtl" | "rtr" | "ltl";
   host?: string;
+  remark?: string;
   editFlag: boolean;
   transformOrigin: [number, number];
   rows: Array<QdzNodeRow>;
@@ -77,6 +79,7 @@ export const useBlueprintStore = defineStore("blueprint", {
         response: [100, 110],
         server: [100, 80],
         source: [100, 100],
+        remark: [200, 300],
       },
       directions: {
         client: "rtr",
@@ -86,6 +89,7 @@ export const useBlueprintStore = defineStore("blueprint", {
         response: "rtl",
         server: "ltl",
         source: "rtl",
+        remark: "ltr",
       },
       nodeList: [
         {
@@ -236,6 +240,20 @@ export const useBlueprintStore = defineStore("blueprint", {
     setActiveNode(id: string) {
       this.activeNodeId = id;
     },
+    removeActiveNode() {
+      const idx = this.nodeList.findIndex(({ id }) => id === this.activeNodeId);
+      if (idx !== -1) {
+        this.nodeList.splice(idx, 1);
+        // let
+        this.linkList = this.linkList.filter(
+          (l) =>
+            l.startNodeId !== this.activeNodeId &&
+            l.endNodeId !== this.activeNodeId
+        );
+        this.activeNodeId = "";
+        this.saveHistory();
+      }
+    },
     setRect() {
       if (this.el) {
         this.rect = this.el.getBoundingClientRect();
@@ -268,6 +286,13 @@ export const useBlueprintStore = defineStore("blueprint", {
         this.scaleSize = scaleSize;
       } else {
         this.scaleSize = Math.round(scaleSize * 100) / 100;
+      }
+    },
+    editRemak(id: string, value: string) {
+      const node = this.nodeList.find((n) => n.id === id);
+      if (node) {
+        node.remark = value;
+        this.saveHistory();
       }
     },
     setNodeRect(
@@ -320,8 +345,15 @@ export const useBlueprintStore = defineStore("blueprint", {
       const node = this.nodeList.find((n) => n.id === id);
       if (node) {
         const idx = node.rows.findIndex(({ rule }) => rule === ruleName);
+        const ruleId = node.rows[idx].inputId || node.rows[idx].outputId;
         if (idx !== -1) {
           node.rows.splice(idx, 1);
+          const linkIdx = this.linkList.findIndex(
+            (l) => l.start === ruleId || l.end === ruleId
+          );
+          if (linkIdx !== -1) {
+            this.linkList.splice(linkIdx, 1);
+          }
           this.saveHistory();
         }
       }
@@ -365,6 +397,7 @@ export const useBlueprintStore = defineStore("blueprint", {
           { rule: "*", name: "", editable: false, inputId: getRandomId() },
           { rule: "*", name: "", editable: false, outputId: getRandomId() },
         ],
+        remark: node.type === "remark" ? "右键编辑标记内容～" : undefined,
       });
       callback(id);
     },
