@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { debounce, cloneDeep } from "lodash-es";
 import { getRandomId } from "/@/utils";
+import { HttpLogResolver } from "/@/utils/resolver/http-log-resolver";
 
 export type QdzNodeType =
   | "client"
@@ -162,8 +163,8 @@ export const useBlueprintStore = defineStore("blueprint", {
           transformOrigin: [0, 0],
           direction: "rtl", // 方向， ltr: 左出右进 rtl: 右出左进  rtr:右出右进  ltl:左出左进
           rows: [
-            { rule: "*", name: "", editable: false, inputId: "b1d8d5f1" },
             { rule: "*", name: "", editable: false, outputId: "ntf84f4g1g" },
+            { rule: "*", name: "", editable: false, inputId: "b1d8d5f1" },
           ],
         },
       ] as QdzNode[],
@@ -231,6 +232,7 @@ export const useBlueprintStore = defineStore("blueprint", {
       ] as QdzLink[],
       history: [] as { nodeList: QdzNode[]; linkList: QdzLink[] }[],
       maxHistoryLength: 10,
+      resolverList: [new HttpLogResolver()],
     };
   },
   actions: {
@@ -331,12 +333,22 @@ export const useBlueprintStore = defineStore("blueprint", {
       const node = this.nodeList.find((n) => n.id === id);
       if (node) {
         if (node.rows.findIndex(({ rule }) => rule === ruleName) === -1) {
-          node.rows.push({
-            rule: ruleName,
-            name: ruleName,
-            editable: true,
-            outputId: getRandomId(),
-          });
+          if (node.type === "response") {
+            // 响应拦截添加输入端口，其余添加输出端口
+            node.rows.push({
+              rule: ruleName,
+              name: ruleName,
+              editable: true,
+              inputId: getRandomId(),
+            });
+          } else {
+            node.rows.push({
+              rule: ruleName,
+              name: ruleName,
+              editable: true,
+              outputId: getRandomId(),
+            });
+          }
           this.saveHistory();
         }
       }
@@ -399,6 +411,53 @@ export const useBlueprintStore = defineStore("blueprint", {
         ],
         remark: node.type === "remark" ? "右键编辑标记内容～" : undefined,
       });
+      this.saveHistory();
+      callback(id);
+    },
+    appendSourceNode(
+      node: {
+        type: QdzNodeType;
+        title: string;
+        position: [number, number];
+        rows: { rule: string; data: any }[];
+      },
+      callback: (id: string) => void
+    ) {
+      const id = getRandomId();
+      const { offsetWidth, offsetHeight } = this.el as HTMLDivElement;
+      let [initX, initY] = node.position;
+      const [w, h] = this.sizes[node.type];
+      initX = Math.min(initX, offsetWidth - w - 20);
+      initY = Math.min(initY, offsetHeight - h - 20);
+      this.nodeList.push({
+        type: node.type,
+        id,
+        title: node.title,
+        initX,
+        initY,
+        // position: [100, 200],
+        x: initX - this.translateX,
+        y: initY - this.translateY,
+        w,
+        h,
+        transformOrigin: [0, 0],
+        editFlag: true,
+        direction: this.directions[node.type] as "ltr" | "rtl" | "rtr" | "ltl",
+        rows: node.rows.map((row) => ({
+          rule: row.rule,
+          name: "",
+          editable: false,
+          inputId: getRandomId(),
+          outputId: getRandomId(),
+          data: row.data,
+        })),
+        // rows: [
+        //   { rule: "*", name: "", editable: false, inputId: getRandomId() },
+        //   { rule: "*", name: "", editable: false, outputId: getRandomId() },
+        // ],
+        remark: node.type === "remark" ? "右键编辑标记内容～" : undefined,
+      });
+      this.saveHistory();
       callback(id);
     },
     initNodeTransformOrigin() {
@@ -438,6 +497,36 @@ export const useBlueprintStore = defineStore("blueprint", {
         }));
       }
       callback();
+    },
+    async resolve(file: File, point: [number, number]) {
+      // const next = this.resolverList[0];
+      let idx = 0,
+        isOk = false;
+      try {
+        while (idx < this.resolverList.length) {
+          const result = await this.resolverList[idx].resolve(file);
+          idx++;
+          if (result.title) {
+            const { title, rows } = result;
+            isOk = true;
+            console.log("isOk");
+            this.appendSourceNode(
+              {
+                type: "source",
+                title: title,
+                position: point,
+                rows: rows,
+              },
+              () => {}
+            );
+          }
+        }
+      } catch (error) {
+        console.log(error);
+      }
+      if (!isOk) {
+        throw new Error("不支持的文件格式");
+      }
     },
   },
 });

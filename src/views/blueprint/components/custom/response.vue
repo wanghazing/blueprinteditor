@@ -31,8 +31,8 @@
       >
         <span
           class="row-item--title"
-          v-tooltip.bottom="row.inputId ? '输入' : row.rule"
-          >{{ row.inputId ? "输入" : row.rule }}</span
+          v-tooltip.bottom="row.outputId ? '输出' : row.rule"
+          >{{ row.outputId ? "输出" : row.rule }}</span
         >
         <div
           v-if="row.inputId"
@@ -159,6 +159,13 @@ const onShowContextmenu = (rowData: any, e: MouseEvent) => {
 .node-response {
   .node-component--title {
     background-color: rgba(235, 150, 39, 0.81) !important;
+  }
+  .row-item.row-item__output {
+    text-align: left !important;
+    background-color: transparent !important;
+  }
+  .row-item.row-item__input {
+    background-color: rgba(48, 48, 48, 0.91) !important;
   }
 }
 </style>

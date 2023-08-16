@@ -38,6 +38,7 @@ import NodeServer from "./custom/server.vue";
 import NodeRequest from "./custom/request.vue";
 import NodeResponse from "./custom/response.vue";
 import NodeRemark from "./custom/remark.vue";
+import NodeSource from "./custom/source.vue";
 import { useBlueprintStore, QdzNode, QdzNodeType } from "/@/store/blueprint";
 
 const blueprintStore = useBlueprintStore();
@@ -129,6 +130,9 @@ const getComponent = (nodeType: QdzNodeType) => {
   }
   if (nodeType === "remark") {
     return NodeRemark;
+  }
+  if (nodeType === "source") {
+    return NodeSource;
   }
   return NodeEmpty;
 };

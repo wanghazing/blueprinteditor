@@ -126,6 +126,7 @@
     >
       <VueJsonPretty :data="storeCode"></VueJsonPretty>
     </Dialog>
+    <Toast />
   </div>
 </template>
 <script lang="ts" setup>
@@ -133,8 +134,10 @@ import { ref, reactive, onMounted, nextTick } from "vue";
 import screenfull from "screenfull";
 import VueJsonPretty from "vue-json-pretty";
 import "vue-json-pretty/lib/styles.css";
+import { useToast } from "primevue/usetoast";
 import ContextMenu from "primevue/contextmenu";
 import Dialog from "primevue/dialog";
+import Toast from "primevue/toast";
 import { getRandomId } from "/@/utils";
 import Node from "./components/node.vue";
 import QdzLinearGradient from "./components/element/qdz-linear-gradient";
@@ -143,6 +146,7 @@ import { useBlueprintStore, QdzNode, QdzLink } from "/@/store/blueprint";
 import { QdzNodeType } from "/@/store/blueprint";
 
 const blueprintStore = useBlueprintStore();
+const toast = useToast();
 // const linkList = ref( as QdzLink[]);
 
 /**
@@ -184,10 +188,41 @@ const contextMenuList = ref([
       onConfirmAppendNode("remark");
     },
   },
-  { label: "报文", icon: "pi pi-fw pi-plus" },
-  { label: "资源", icon: "pi pi-fw pi-plus" },
+  // { label: "报文", icon: "pi pi-fw pi-plus" },
+  {
+    label: "资源",
+    icon: "pi pi-fw pi-plus",
+    command: () => {
+      // onConfirmAppendNode("source");
+      const input = document.createElement("input");
+      input.style.position = "fixed";
+      input.style.top = "-1000px";
+      input.style.left = "-1000px";
+      input.setAttribute("type", "file");
+      input.addEventListener("change", async (e) => {
+        console.log((e.target as HTMLInputElement).files);
+        try {
+          const files = (e.target as HTMLInputElement).files;
+          if (files) {
+            await blueprintStore.resolve(files[0], appendPoint.value);
+          }
+        } catch (error) {
+          toast.add({
+            severity: "warn",
+            summary: "温馨提示",
+            detail: (error as Error).message,
+            life: 3000,
+          });
+        }
+        document.body.removeChild(input);
+      });
+      document.body.appendChild(input);
+      input.click();
+    },
+  },
 ]);
 const onConfirmAppendNode = (type: QdzNodeType) => {
+  console.log(type);
   let baseName = {
     client: "客户端",
     server: "服务端",
@@ -691,9 +726,26 @@ const showStoreCode = () => {
   isShowCode.value = true;
 };
 
-const onDrop = (e: DragEvent) => {
-  console.log(e.dataTransfer?.files);
+const onDrop = async (e: DragEvent) => {
+  console.log(e);
   e.preventDefault();
+  const file = e.dataTransfer?.files[0];
+  if (file) {
+    try {
+      await blueprintStore.resolve(file, [
+        e.clientX - (blueprintStore.rect?.x || 0),
+        e.clientY - (blueprintStore.rect?.y || 0),
+      ]);
+    } catch (error) {
+      console.log(error);
+      toast.add({
+        severity: "warn",
+        summary: "温馨提示",
+        detail: (error as Error).message,
+        life: 3000,
+      });
+    }
+  }
 };
 
 onMounted(() => {

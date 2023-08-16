@@ -1,0 +1,19 @@
+{
+  "type": "qdz-http-log",
+  "request": {
+    "headers": {
+      "a": 1
+    },
+    "body": {
+      "b": 2
+    }
+  },
+  "response": {
+    "headers": {
+      "a": 3
+    },
+    "body": {
+      "b": 4
+    }
+  }
+}
