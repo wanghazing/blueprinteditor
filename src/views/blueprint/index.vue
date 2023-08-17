@@ -104,6 +104,8 @@
           <QdzLinearGradient
             v-for="link in blueprintStore.linkList"
             :link="link"
+            startColor="#bbcf00"
+            endColor="#00cf6e"
           />
           <path
             v-for="link in blueprintStore.linkList"
@@ -489,13 +491,13 @@ const onPointMouseUp = (e: MouseEvent) => {
         const idx = blueprintStore.linkList.findIndex(
           (link) => link.start === pointId || link.end === pointId
         );
+        console.log(idx);
         // console.log(idx);
         if (idx === -1) {
           // 未使用的端口
           const pointType = point.getAttribute("data-pointType");
           // console.log(dragStart.temPointType, pointType);
-          if (dragStart.temPointType === pointType || dragStart.addLinkFlag) {
-            // 只能连接与原类型相同的端口
+          if (dragStart.temPointType !== pointType) {
             // blueprintStore.linkList[idx]
             const nodeId = point.getAttribute("data-nodeid");
             // console.log(blueprintStore.linkList[dragStart.linkIndex]);

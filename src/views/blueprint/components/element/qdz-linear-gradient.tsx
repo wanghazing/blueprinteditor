@@ -1,9 +1,9 @@
-import { ref } from "vue";
-
 import { QdzLink } from "/@/store/blueprint";
 
 type Props = {
   link: QdzLink;
+  startColor: string;
+  endColor: string;
 };
 
 export default (props: Props) => {
@@ -35,8 +35,14 @@ export default (props: Props) => {
       x2={archs[2]}
       y2={archs[3]}
     >
-      <stop offset="25%" style="stop-color: #bbcf00; stop-opacity: 1" />
-      <stop offset="70%" style="stop-color:  #00cf6e; stop-opacity: 1" />
+      <stop
+        offset="25%"
+        style={`stop-color: ${props.startColor}; stop-opacity: 1`}
+      />
+      <stop
+        offset="70%"
+        style={`stop-color:  ${props.endColor}; stop-opacity: 1`}
+      />
     </linearGradient>
   );
 };
