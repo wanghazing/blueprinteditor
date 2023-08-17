@@ -1,7 +1,7 @@
 <template>
-  <header class="layout-top">
+  <!-- <header class="layout-top">
     <Menubar :model="state.items" />
-  </header>
+  </header> -->
   <section class="layout-main">
     <div class="client-full layout-main--body">
       <router-view v-slot="{ Component }">
@@ -56,12 +56,12 @@ const state = reactive({
 }
 .layout-main {
   background-color: #ecf3f4;
-  margin-top: 70px;
+  // margin-top: 70px;
   padding-top: 20px;
   &--body {
     // background-color: #fff;
     margin: 0 auto;
-    min-height: calc(100vh - 90px);
+    min-height: calc(100vh - 20px);
     position: relative;
   }
 }
