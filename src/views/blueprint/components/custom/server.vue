@@ -27,6 +27,7 @@
         }"
         v-for="(row, idx) in props.rows"
         :key="idx"
+        @contextmenu="(e) => onShowContextmenu(e)"
       >
         <input
           v-if="editHostFlag"
@@ -80,6 +81,7 @@
 
 <script lang="ts" setup>
 import { ref, nextTick } from "vue";
+import ContextMenu from "primevue/contextmenu";
 import { useBlueprintStore } from "/@/store/blueprint";
 const blueprintStore = useBlueprintStore();
 const props = defineProps([
@@ -92,6 +94,7 @@ const props = defineProps([
 ]);
 const editTitleFlag = ref(false);
 const editHostFlag = ref(false);
+const contextmenu = ref();
 const contextMenuList = ref([
   {
     label: "编辑地址",
@@ -109,6 +112,7 @@ const onEditHostFinish = (e: FocusEvent) => {
   const value = (e.target as HTMLInputElement).value;
   if (value) {
     blueprintStore.setHost(props.nodeId, value);
+    editHostFlag.value = false;
   }
 };
 const onEditTitle = (e: MouseEvent) => {
@@ -133,12 +137,38 @@ const onInputTitle = (e: FocusEvent) => {
     (e.target as HTMLInputElement).value || "未命名"
   );
 };
+const onShowContextmenu = (e: MouseEvent) => {
+  contextMenuList.value = [
+    {
+      label: "编辑地址",
+      icon: "pi pi-fw pi-pencil",
+      command: () => {
+        editHostFlag.value = true;
+        nextTick(() => {
+          let input = document.querySelector(".node-server input");
+          if (input) {
+            (input as HTMLInputElement).value = props.host;
+            (input as HTMLInputElement).focus();
+          }
+        });
+      },
+    },
+  ];
+  contextmenu.value.show(e);
+};
 </script>
 
 <style lang="scss">
 .node-server {
   .node-component--title {
     background-color: rgba(175, 22, 206, 0.81) !important;
+  }
+  .row-item.row-item__output {
+    text-align: left !important;
+    background-color: transparent !important;
+  }
+  .row-item.row-item__input {
+    background-color: rgba(48, 48, 48, 0.91) !important;
   }
 }
 </style>

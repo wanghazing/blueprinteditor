@@ -39,6 +39,8 @@ import NodeRequest from "./custom/request.vue";
 import NodeResponse from "./custom/response.vue";
 import NodeRemark from "./custom/remark.vue";
 import NodeSource from "./custom/source.vue";
+import NodeDelay from "./custom/delay.vue";
+import NodeHttpError from "./custom/http-error.vue";
 import { useBlueprintStore, QdzNode, QdzNodeType } from "/@/store/blueprint";
 
 const blueprintStore = useBlueprintStore();
@@ -133,6 +135,12 @@ const getComponent = (nodeType: QdzNodeType) => {
   }
   if (nodeType === "source") {
     return NodeSource;
+  }
+  if (nodeType === "delay") {
+    return NodeDelay;
+  }
+  if (nodeType === "error") {
+    return NodeHttpError;
   }
   return NodeEmpty;
 };

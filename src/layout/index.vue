@@ -12,39 +12,7 @@
     </div>
   </section>
 </template>
-<script lang="ts" setup>
-import Menubar from "primevue/menubar";
-import { reactive } from "vue";
-const state = reactive({
-  items: [
-    {
-      label: "常用",
-      icon: "pi pi-fw pi-th-large",
-      to: "/home",
-    },
-    {
-      label: "代理",
-      icon: "pi pi-fw pi-send",
-      to: "/proxy",
-    },
-    {
-      label: "Api Log",
-      icon: "pi pi-fw pi-file-clock",
-      to: "/api-history",
-    },
-    {
-      label: "蓝图",
-      icon: "pi pi-fw pi-hash-tag",
-      to: "/blueprint",
-    },
-    {
-      label: "文件下载",
-      icon: "pi pi-fw pi-download",
-      to: "/download",
-    },
-  ],
-});
-</script>
+<script lang="ts" setup></script>
 
 <style lang="scss">
 .layout-top {

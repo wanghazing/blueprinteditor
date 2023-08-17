@@ -45,6 +45,12 @@
           @click="blueprintStore.undo(() => {})"
         ></i>
         <i
+          class="pi pi-cog tw-ml-6 tw-text-center"
+          :class="{ 'ico-btn--disabled': !blueprintStore.activeNodeId }"
+          style="font-size: 1.25rem"
+          @click="onSetting"
+        ></i>
+        <i
           class="pi pi-trash tw-ml-6 tw-text-center tw-text-red-600"
           :class="{ 'ico-btn--disabled': !blueprintStore.activeNodeId }"
           style="font-size: 1.25rem"
@@ -128,6 +134,60 @@
     >
       <VueJsonPretty :data="storeCode"></VueJsonPretty>
     </Dialog>
+    <Dialog
+      v-model:visible="isShowSettingDialog"
+      modal
+      header="设置"
+      :style="{ width: '30rem' }"
+    >
+      <p class="tw-text-lg tw-mb-4">方向</p>
+      <div class="tw-flex tw-flex-row tw-items-center">
+        <div class="tw-flex tw-items-center">
+          <RadioButton
+            v-model="settingForm.direction"
+            inputId="ltr"
+            name="direction"
+            value="ltr"
+          />
+          <label for="ltr" class="tw-ml-2">左进右出</label>
+        </div>
+        <div class="tw-flex tw-items-center tw-ml-2">
+          <RadioButton
+            v-model="settingForm.direction"
+            inputId="rtl"
+            name="direction"
+            value="rtl"
+          />
+          <label for="rtl" class="tw-ml-2">右进左出</label>
+        </div>
+        <div class="tw-flex tw-items-center tw-ml-2">
+          <RadioButton
+            v-model="settingForm.direction"
+            inputId="ltl"
+            name="direction"
+            value="ltl"
+          />
+          <label for="ltl" class="tw-ml-2">左进左出</label>
+        </div>
+        <div class="tw-flex tw-items-center tw-ml-2">
+          <RadioButton
+            v-model="settingForm.direction"
+            inputId="rtr"
+            name="direction"
+            value="rtr"
+          />
+          <label for="rtr" class="tw-ml-2">右进右出</label>
+        </div>
+      </div>
+      <template #footer>
+        <Button
+          label="Yes"
+          icon="pi pi-check"
+          @click="onConfirmSetting"
+          autofocus
+        />
+      </template>
+    </Dialog>
     <Toast />
   </div>
 </template>
@@ -139,7 +199,9 @@ import "vue-json-pretty/lib/styles.css";
 import { useToast } from "primevue/usetoast";
 import ContextMenu from "primevue/contextmenu";
 import Dialog from "primevue/dialog";
+import RadioButton from "primevue/radiobutton";
 import Toast from "primevue/toast";
+import Button from "primevue/button";
 import { getRandomId } from "/@/utils";
 import Node from "./components/node.vue";
 import QdzLinearGradient from "./components/element/qdz-linear-gradient";
@@ -163,14 +225,14 @@ const contextMenuList = ref([
     },
   },
   {
-    label: "请求拦截",
+    label: "-<拦截器",
     icon: "pi pi-fw pi-plus",
     command: () => {
       onConfirmAppendNode("request");
     },
   },
   {
-    label: "响应拦截",
+    label: ">-拦截器",
     icon: "pi pi-fw pi-plus",
     command: () => {
       onConfirmAppendNode("response");
@@ -188,6 +250,20 @@ const contextMenuList = ref([
     icon: "pi pi-fw pi-plus",
     command: () => {
       onConfirmAppendNode("remark");
+    },
+  },
+  {
+    label: "延时",
+    icon: "pi pi-fw pi-plus",
+    command: () => {
+      onConfirmAppendNode("delay");
+    },
+  },
+  {
+    label: "http异常",
+    icon: "pi pi-fw pi-plus",
+    command: () => {
+      onConfirmAppendNode("error");
     },
   },
   // { label: "报文", icon: "pi pi-fw pi-plus" },
@@ -228,11 +304,13 @@ const onConfirmAppendNode = (type: QdzNodeType) => {
   let baseName = {
     client: "客户端",
     server: "服务端",
-    request: "请求拦截",
-    response: "响应拦截",
+    request: "-<拦截器",
+    response: ">-拦截器",
     json: "json数据",
     source: "文件",
+    delay: "延时",
     empty: "空节点",
+    error: "http异常",
     remark: "标注",
   }[type];
   let count = 1;
@@ -361,6 +439,7 @@ const onPointMouseDown = (detail: {
     (link) =>
       link[{ input: "end", output: "start" }[type] as "start" | "end"] === id
   );
+  console.log(idx);
   // blueprintStore.setRect();
   if (idx !== -1) {
     // 端口上已存在连线
@@ -496,9 +575,20 @@ const onPointMouseUp = (e: MouseEvent) => {
         if (idx === -1) {
           // 未使用的端口
           const pointType = point.getAttribute("data-pointType");
-          // console.log(dragStart.temPointType, pointType);
-          if (dragStart.temPointType !== pointType) {
-            // blueprintStore.linkList[idx]
+          console.log(dragStart.temPointType, pointType, dragStart.addLinkFlag);
+          // 新路线：驶出类型和驶入类型不同
+          // 切换路线：驶出类型和驶入类型相同
+          let isValidLine = false;
+          if (dragStart.addLinkFlag) {
+            if (dragStart.temPointType !== pointType) {
+              isValidLine = true;
+            }
+          } else {
+            if (dragStart.temPointType === pointType) {
+              isValidLine = true;
+            }
+          }
+          if (isValidLine) {
             const nodeId = point.getAttribute("data-nodeid");
             // console.log(blueprintStore.linkList[dragStart.linkIndex]);
             if (blueprintStore.linkList[dragStart.linkIndex].startTmp) {
@@ -750,6 +840,31 @@ const onDrop = async (e: DragEvent) => {
   }
 };
 
+/**
+ * 设置相关
+ */
+const isShowSettingDialog = ref(false);
+const settingForm = reactive<{ direction: "rtr" | "ltr" | "rtl" | "ltl" }>({
+  direction: "ltr",
+});
+const onSetting = () => {
+  const node = blueprintStore.nodeList.find(
+    ({ id }) => id === blueprintStore.activeNodeId
+  );
+  //
+  if (node) {
+    settingForm.direction = node.direction;
+    isShowSettingDialog.value = true;
+  }
+};
+const onConfirmSetting = () => {
+  blueprintStore.setNodeDirection(
+    blueprintStore.activeNodeId,
+    settingForm.direction
+  );
+  isShowSettingDialog.value = false;
+};
+
 onMounted(() => {
   // 等待vue-transition结束
   setTimeout(() => {
@@ -816,7 +931,7 @@ const drawCurve = (start: [number, number], end: [number, number]) => {
       flex-direction: row;
       align-items: center;
       background-color: #fff;
-      width: 31rem;
+      width: 33rem;
       i {
         cursor: pointer;
         &:hover {
