@@ -15,6 +15,7 @@ const alias: Record<string, string> = {
 export default defineConfig({
   plugins: [vue(), vueJsx()],
   resolve: { alias },
+  base: "/ugi/",
   server: {
     host: "0.0.0.0",
     port: 8000,
