@@ -15,7 +15,7 @@ const imgWidth = (imgHeight * 1080) / 933;
 const calcStyle = ref({});
 const translateX = ref(0);
 const translateY = ref(0);
-const readMousePos = (e) => {
+const readMousePos = (e: MouseEvent) => {
   // console.log(e);
   translateX.value = (innerWidth / 2 - e.x) / 45;
   translateY.value = (innerHeight / 2 - e.y) / 75;
