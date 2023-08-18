@@ -46,7 +46,11 @@
         ></i>
         <i
           class="pi pi-cog tw-ml-6 tw-text-center"
-          :class="{ 'ico-btn--disabled': !blueprintStore.activeNodeId }"
+          :class="{
+            'ico-btn--disabled':
+              !blueprintStore.activeNodeId ||
+              isNoRelativeNode(blueprintStore.activeNodeId),
+          }"
           style="font-size: 1.25rem"
           @click="onSetting"
         ></i>
@@ -61,10 +65,10 @@
           style="font-size: 1.25rem"
           @click="showStoreCode"
         ></i>
-        <i
+        <!-- <i
           class="pi pi-question-circle tw-ml-6 tw-text-center"
           style="font-size: 1.25rem"
-        ></i>
+        ></i> -->
       </div>
       <div
         id="blueprint-canvas"
@@ -848,6 +852,12 @@ const settingForm = reactive<{ direction: "rtr" | "ltr" | "rtl" | "ltl" }>({
   direction: "ltr",
 });
 const onSetting = () => {
+  if (
+    !blueprintStore.activeNodeId ||
+    isNoRelativeNode(blueprintStore.activeNodeId)
+  ) {
+    return;
+  }
   const node = blueprintStore.nodeList.find(
     ({ id }) => id === blueprintStore.activeNodeId
   );
@@ -863,6 +873,14 @@ const onConfirmSetting = () => {
     settingForm.direction
   );
   isShowSettingDialog.value = false;
+};
+// 判断一个节点是否没有被链接
+const isNoRelativeNode = (id: string) => {
+  const idx = blueprintStore.linkList.findIndex(
+    ({ startNodeId, endNodeId }) => startNodeId === id || endNodeId === id
+  );
+  console.log(idx);
+  return idx !== -1;
 };
 
 onMounted(() => {
@@ -931,7 +949,7 @@ const drawCurve = (start: [number, number], end: [number, number]) => {
       flex-direction: row;
       align-items: center;
       background-color: #fff;
-      width: 33rem;
+      width: 31rem;
       i {
         cursor: pointer;
         &:hover {
