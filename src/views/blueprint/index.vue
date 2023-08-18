@@ -436,6 +436,7 @@ const onPointMouseDown = (detail: {
   id: string;
   nodeId: string;
 }) => {
+  dragStart.addLinkFlag = false;
   console.log(detail);
   const { event, type, id, nodeId } = detail;
   // blueprintStore.linkList.
